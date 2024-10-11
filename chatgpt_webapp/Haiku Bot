@@ -1,0 +1,83 @@
+import os
+import random
+from openai import OpenAI
+from twilio.rest import Client
+from dotenv import load_dotenv
+from flask import Flask, render_template, request
+
+# Load environment variables from .env file
+load_dotenv()
+
+# OpenAI and Twilio credentials
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+twilio_account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+twilio_auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+twilio_phone_number = os.getenv('TWILIO_PHONE_NUMBER')
+
+# Create Twilio client
+twilio_client = Client(twilio_account_sid, twilio_auth_token)
+
+app = Flask(__name__)
+
+def send_sms(to, message, media_url=None):
+    """Send SMS using Twilio with an optional media URL."""
+    message_data = {
+        'body': message,
+        'from_': twilio_phone_number,
+        'to': to
+    }
+    if media_url:
+        message_data['media_url'] = media_url  # Include image if available
+
+    message = twilio_client.messages.create(**message_data)
+    print(f"Message sent: {message.body}")
+
+def generate_haiku():
+    """Generate a motivational haiku using OpenAI's API."""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Generate a motivational haiku."
+                }
+            ]
+        )
+        haiku = response.choices[0].message.content
+        return haiku.strip()
+    except Exception as e:
+        print(f"Error generating haiku: {e}")
+        return "Stay positive and keep going!"
+
+def generate_image(haiku):
+    """Generate an image related to the haiku using OpenAI's API."""
+    try:
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=haiku,
+            n=1,
+            size="1024x1024"
+        )
+        image_url = response.data[0].url
+        return image_url
+    except Exception as e:
+        print(f"Error generating image: {e}")
+        return None
+
+@app.route("/", methods=["GET", "POST"])
+def home():
+    if request.method == "POST":
+        phone_number = request.form["phone_number"]
+        haiku = generate_haiku()
+        image_url = generate_image(haiku)
+
+        # Send the haiku and image via SMS
+        send_sms(phone_number, haiku, media_url=image_url)
+        return render_template("index_two.html", haiku=haiku, image_url=image_url, success=True)
+    
+    return render_template("index_two.html", haiku=None, image_url=None, success=False)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+

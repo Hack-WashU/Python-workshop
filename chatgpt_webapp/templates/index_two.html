@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motivational Haiku Sender</title>
+</head>
+<body>
+    <h1>Send a Motivational Haiku</h1>
+    <form method="POST">
+        <label for="phone_number">Enter your phone number:</label>
+        <input type="text" id="phone_number" name="phone_number" required>
+        <button type="submit">Send Haiku</button>
+    </form>
+
+    {% if success %}
+    <h2>Haiku Sent!</h2>
+    <p>{{ haiku }}</p>
+    {% if image_url %}
+    <img src="{{ image_url }}" alt="Image related to haiku">
+    {% endif %}
+    {% endif %}
+</body>
+</html>
